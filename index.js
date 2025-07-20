@@ -2,17 +2,14 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 
 const app = express();
-
 const PORT = process.env.PORT || 3000;
 
-let browser;
-let page;
-let isNavigating = false;
+let browser, page, isNavigating = false;
 
 const VIEWPORT = {
   width: 1080,
   height: 1920,
-  deviceScaleFactor: 7, // DPI 700
+  deviceScaleFactor: 7,
   isMobile: true,
   hasTouch: true,
   isLandscape: false,
@@ -20,7 +17,6 @@ const VIEWPORT = {
 
 const USER_AGENT = 'Mozilla/5.0 (Linux; Android 10; Bluestacks) AppleWebKit/537.36 Chrome/99.0 Mobile Safari/537.36';
 
-// Inicializa Puppeteer e abre a página inicial
 async function initBrowser() {
   browser = await puppeteer.launch({
     headless: true,
@@ -39,7 +35,6 @@ async function initBrowser() {
   await page.setViewport(VIEWPORT);
   await page.setExtraHTTPHeaders({
     'accept-language': 'en-US,en;q=0.9',
-    'sec-ch-ua': '"Chromium";v="114", "Google Chrome";v="114", ";Not A Brand";v="99"',
   });
 
   await page.goto('https://now.gg/apps/uncube/10005/now.html', {
@@ -47,39 +42,29 @@ async function initBrowser() {
     timeout: 60000,
   });
 
-  console.log('🚀 Puppeteer inicializado e página carregada');
+  console.log('✅ Puppeteer pronto');
 }
 
-// Função para manipular cada requisição do proxy
 async function handleRequest(req, res) {
-  if (isNavigating) {
-    await new Promise(r => setTimeout(r, 1000));
-  }
+  if (isNavigating) await new Promise(r => setTimeout(r, 1000));
   isNavigating = true;
 
   try {
-    // Monta URL completa do destino
     const targetURL = 'https://now.gg' + req.originalUrl;
-
     await page.setRequestInterception(true);
 
     page.once('request', interceptedRequest => {
-      const headers = Object.assign({}, interceptedRequest.headers());
-
-      // Substitui headers por valores reais do cliente para evitar bloqueios
-      headers['user-agent'] = req.headers['user-agent'] || USER_AGENT;
-      headers['referer'] = 'https://now.gg';
-      headers['origin'] = 'https://now.gg';
-      headers['cookie'] = req.headers['cookie'] || '';
-
+      const headers = {
+        ...interceptedRequest.headers(),
+        'user-agent': req.headers['user-agent'] || USER_AGENT,
+        'referer': 'https://now.gg',
+        'origin': 'https://now.gg',
+        'cookie': req.headers['cookie'] || '',
+      };
       interceptedRequest.continue({ headers });
     });
 
-    const response = await page.goto(targetURL, {
-      waitUntil: 'networkidle2',
-      timeout: 60000,
-    });
-
+    const response = await page.goto(targetURL, { waitUntil: 'networkidle2', timeout: 60000 });
     const buffer = await response.buffer();
     const contentType = response.headers()['content-type'] || '';
 
@@ -87,20 +72,13 @@ async function handleRequest(req, res) {
 
     const setCookies = response.headers()['set-cookie'];
     if (setCookies) {
-      const newCookies = Array.isArray(setCookies) ? setCookies : [setCookies];
-      const fixedCookies = newCookies.map(c =>
-        c.replace(/Domain=\.?now\.gg/gi, 'Domain=localhost').replace(/Secure/gi, '')
-      );
-      res.setHeader('set-cookie', fixedCookies);
+      const cookies = Array.isArray(setCookies) ? setCookies : [setCookies];
+      res.setHeader('set-cookie', cookies.map(c => c.replace(/Domain=\.?now\.gg/gi, 'Domain=localhost').replace(/Secure/gi, '')));
     }
 
     if (contentType.includes('text/html')) {
       let body = buffer.toString('utf8');
-
-      // Remove referências absolutas para o domínio real
       body = body.replace(/https:\/\/now\.gg/g, '');
-
-      // Injeta script para DPI 700 e dimensões reais
       body = body.replace('</head>', `
         <script>
           Object.defineProperty(window, 'devicePixelRatio', { get: () => 7 });
@@ -110,16 +88,13 @@ async function handleRequest(req, res) {
           Object.defineProperty(window, 'innerHeight', { get: () => 1920 });
         </script>
       </head>`);
-
-      res.status(response.status());
-      res.send(body);
+      res.status(response.status()).send(body);
     } else {
-      // Resposta binária (imagens, JS, CSS)
-      res.status(response.status());
-      res.send(buffer);
+      res.status(response.status()).send(buffer);
     }
-  } catch (error) {
-    console.error('❌ Erro no proxy Puppeteer:', error);
+
+  } catch (err) {
+    console.error('Erro no proxy:', err);
     res.status(500).send('Erro interno no proxy');
   } finally {
     isNavigating = false;
@@ -133,6 +108,6 @@ app.use(async (req, res) => {
 (async () => {
   await initBrowser();
   app.listen(PORT, () => {
-    console.log(`🚀 Proxy Puppeteer rodando em http://localhost:${PORT}`);
+    console.log(`🚀 Proxy online: http://localhost:${PORT}`);
   });
 })();
