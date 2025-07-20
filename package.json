@@ -1,15 +1,17 @@
 {
-  "name": "nowgg-puppeteer-proxy",
+  "name": "proxy-nowgg",
   "version": "1.0.0",
-  "description": "Proxy reverso para now.gg usando Puppeteer para evitar bloqueios no Render",
+  "description": "Proxy para now.gg com Puppeteer",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "puppeteer install"  // 👈 força o download do Chromium no Render
   },
-  "author": "Seu Nome",
-  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "puppeteer": "^22.8.2"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
