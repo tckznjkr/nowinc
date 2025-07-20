@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "postinstall": "puppeteer install"  // 👈 força o download do Chromium no Render
+    "postinstall": "puppeteer install" 
   },
   "dependencies": {
     "express": "^4.18.2",
