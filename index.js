@@ -23,7 +23,7 @@ async function initBrowser() {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: puppeteer.executablePath(), // 👈 CORREÇÃO AQUI
+      executablePath: puppeteer.executablePath(), // 👈 IMPORTANTE
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -54,16 +54,13 @@ async function initBrowser() {
 }
 
 async function handleRequest(req, res) {
-  if (isNavigating) {
-    await new Promise((r) => setTimeout(r, 500));
-  }
-
+  if (isNavigating) await new Promise((r) => setTimeout(r, 500));
   isNavigating = true;
 
   try {
     const targetURL = 'https://now.gg' + req.originalUrl;
-
     await page.setRequestInterception(true);
+
     page.once('request', (interceptedRequest) => {
       const headers = {
         ...interceptedRequest.headers(),
@@ -83,7 +80,6 @@ async function handleRequest(req, res) {
 
     const buffer = await response.buffer();
     const contentType = response.headers()['content-type'] || '';
-
     res.setHeader('content-type', contentType);
 
     const setCookies = response.headers()['set-cookie'];
@@ -133,7 +129,6 @@ app.use(async (req, res) => {
 
 (async () => {
   await initBrowser();
-
   app.listen(PORT, () => {
     console.log(`🚀 Proxy rodando em http://localhost:${PORT}`);
   });
